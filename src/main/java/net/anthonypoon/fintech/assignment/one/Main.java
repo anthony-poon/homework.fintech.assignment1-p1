@@ -33,8 +33,8 @@ import org.apache.commons.io.output.TeeOutputStream;
  * @author ypoon
  */
 public class Main {
-    private static int minYear = 2015;
-    private static int maxYear = 2017;
+    private static Date minYear;
+    private static Date maxYear;
     private static String inputPath;
     private static final int[] PRESET_STOCK_CODE = {
         6,
@@ -64,9 +64,10 @@ public class Main {
 
     public static void main(String args[]) throws Exception {
         
-        parseArgument(args);     
-                
-        FileOutputStream outFile = new FileOutputStream("output_" + minYear +"_" + maxYear + ".txt");
+        parseArgument(args);
+        String minYearStr = new SimpleDateFormat("y").format(minYear);
+        String maxYearStr = new SimpleDateFormat("y").format(maxYear);
+        FileOutputStream outFile = new FileOutputStream("output_" + minYearStr +"_" + maxYearStr + ".txt");
         TeeOutputStream teeStream = new TeeOutputStream(System.out, outFile);
         PrintStream ps = new PrintStream(teeStream);
         System.setOut(ps);        
@@ -78,26 +79,28 @@ public class Main {
             String[] strArray = line.split(",");
             SimpleDateFormat dateFormatter = new SimpleDateFormat("d/M/y");
             Date date = dateFormatter.parse(strArray[0]);
-            for (int col = 1; col <= PRESET_STOCK_CODE.length; col++ ) {
-                if (!stockArray.containsKey(PRESET_STOCK_CODE[col - 1])) {
-                    stockArray.put(PRESET_STOCK_CODE[col - 1], new Stock(PRESET_STOCK_CODE[col - 1], PRESET_STOCK_NAME[col - 1]));
+            if (date.after(minYear) && date.before(maxYear)) {
+                for (int col = 1; col <= PRESET_STOCK_CODE.length; col++ ) {
+                    if (!stockArray.containsKey(PRESET_STOCK_CODE[col - 1])) {
+                        stockArray.put(PRESET_STOCK_CODE[col - 1], new Stock(PRESET_STOCK_CODE[col - 1], PRESET_STOCK_NAME[col - 1]));
+                    }
+                    Stock currentStock = stockArray.get(PRESET_STOCK_CODE[col - 1]);
+                    currentStock.addEntry(date, Double.valueOf(strArray[col]));
                 }
-                Stock currentStock = stockArray.get(PRESET_STOCK_CODE[col - 1]);
-                currentStock.addEntry(date, Double.valueOf(strArray[col]));
             }
         }
         
-        System.out.println("Output from " + minYear + " to " + maxYear);
+        System.out.println("Output from " + minYearStr + " to " + maxYearStr);
         for (Map.Entry<Integer, Stock> pair : stockArray.entrySet()) {
             Stock stock = pair.getValue();
-            System.out.println("Stock #" + pair.getKey() + " Std = " + decimalFormatter.format(stock.getStdByYear(minYear, maxYear)));
+            System.out.println("Stock #" + pair.getKey() + " Std = " + decimalFormatter.format(stock.getStd()));
         }
          
         System.out.println();
         System.out.println("Covariance Matrix:");
         for (Stock stock1 : stockArray.values()) {
             for (Stock stock2 : stockArray.values()) {
-                System.out.print(decimalFormatter.format(getCovariance(stock1, stock2)) + "\t");
+                System.out.print(decimalFormatter.format(Stock.getCovariance(stock1, stock2)) + "\t");
             }
             System.out.println();
         }
@@ -105,55 +108,30 @@ public class Main {
         System.out.println("Coefficient Matrix:");
         for (Stock stock1 : stockArray.values()) {
             for (Stock stock2 : stockArray.values()) {
-                System.out.print(decimalFormatter.format(getCoefficient(stock1, stock2)) + "\t");
+                System.out.print(decimalFormatter.format(Stock.getCoefficient(stock1, stock2)) + "\t");
             }
             System.out.println();
         }
     }
     
-    private static void parseArgument(String args[]) throws ParseException {
+    private static void parseArgument(String args[]) throws Exception {
         Options options = new Options();
         options.addOption("min", true, "Min year. Default = 2015");
         options.addOption("max", true, "Max year. Default = 2017");
         CommandLineParser parser = new DefaultParser();
         CommandLine cli = parser.parse(options, args);
         if (cli.hasOption("min")) {
-            minYear = Integer.valueOf(cli.getOptionValue("min"));
+            minYear = new SimpleDateFormat("d/M/y").parse("01/01/" + cli.getOptionValue("min"));
+        } else {
+            minYear = new SimpleDateFormat("d/M/y").parse("01/01/2015");
         }
         
         if (cli.hasOption("max")) {
-            maxYear = Integer.valueOf(cli.getOptionValue("max"));
+            maxYear = new SimpleDateFormat("d/M/y").parse("31/12/" + cli.getOptionValue("max"));
+        } else {
+            maxYear = new SimpleDateFormat("d/M/y").parse("31/12/" + cli.hasOption("max"));
         }
         
         inputPath = cli.getArgList().get(0);
-    }
-    
-    private static Double getCovariance(Stock stock1, Stock stock2) {
-        Double stock1Avg = stock1.getUAverageByYear(minYear, maxYear);
-        Double stock2Avg = stock2.getUAverageByYear(minYear, maxYear);
-        List<Double> stock1UValueArray = new ArrayList<>();
-        List<Double> stock2UValueArray = new ArrayList<>();
-        for (StockPriceEntry entry : stock1.getAllEntry()) {
-            if (entry.getU() != null) {
-                stock1UValueArray.add(entry.getU());
-            }
-        }
-        for (StockPriceEntry entry : stock2.getAllEntry()) {
-            if (entry.getU() != null) {
-                stock2UValueArray.add(entry.getU());
-            }
-        }
-        Double sum = 0.0;
-        int count = 0;
-        for (int i = 0; i < stock1UValueArray.size(); i ++) {
-            count ++;
-            sum = sum + (stock1UValueArray.get(i) - stock1Avg) * (stock2UValueArray.get(i) - stock2Avg);
-        }
-        return sum * 252 / (count - 1);
-    }
-    
-    private static Double getCoefficient(Stock stock1, Stock stock2) {
-        Double covar = getCovariance(stock1, stock2);
-        return covar / (stock1.getStdByYear(minYear, maxYear) * stock2.getStdByYear(minYear, maxYear));
-    }
+    }    
 }
