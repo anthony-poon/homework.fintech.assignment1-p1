@@ -19,8 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import net.anthonypoon.fintech.assignment.one.dataobject.Stock;
-import net.anthonypoon.fintech.assignment.one.dataobject.StockPriceEntry;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
