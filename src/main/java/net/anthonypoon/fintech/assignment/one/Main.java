@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package net.anthonypoon.assignment_one;
+package net.anthonypoon.fintech.assignment.one;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -19,8 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import net.anthonypoon.assignment_one.DataObject.Stock;
-import net.anthonypoon.assignment_one.DataObject.StockPriceEntry;
+import net.anthonypoon.fintech.assignment.one.dataobject.Stock;
+import net.anthonypoon.fintech.assignment.one.dataobject.StockPriceEntry;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;

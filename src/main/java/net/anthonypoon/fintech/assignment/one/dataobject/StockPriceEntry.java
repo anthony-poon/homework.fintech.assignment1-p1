@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package net.anthonypoon.assignment_one.DataObject;
+package net.anthonypoon.fintech.assignment.one.dataobject;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
