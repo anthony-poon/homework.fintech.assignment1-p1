@@ -58,7 +58,7 @@ public class Main {
         "BOC Hong Kong",
         "Haitong Securities"
     };
-    private static Map<Integer, Stock> stockArray = new TreeMap<>();
+    private static Map<Integer, Stock> stockList = new TreeMap<>();
 
     public static void main(String args[]) throws Exception {
         
@@ -79,33 +79,33 @@ public class Main {
             Date date = dateFormatter.parse(strArray[0]);
             if (date.after(minYear) && date.before(maxYear)) {
                 for (int col = 1; col <= PRESET_STOCK_CODE.length; col++ ) {
-                    if (!stockArray.containsKey(PRESET_STOCK_CODE[col - 1])) {
-                        stockArray.put(PRESET_STOCK_CODE[col - 1], new Stock(PRESET_STOCK_CODE[col - 1], PRESET_STOCK_NAME[col - 1]));
+                    if (!stockList.containsKey(PRESET_STOCK_CODE[col - 1])) {
+                        stockList.put(PRESET_STOCK_CODE[col - 1], new Stock(PRESET_STOCK_CODE[col - 1], PRESET_STOCK_NAME[col - 1]));
                     }
-                    Stock currentStock = stockArray.get(PRESET_STOCK_CODE[col - 1]);
+                    Stock currentStock = stockList.get(PRESET_STOCK_CODE[col - 1]);
                     currentStock.addEntry(date, Double.valueOf(strArray[col]));
                 }
             }
         }
         
         System.out.println("Output from " + minYearStr + " to " + maxYearStr);
-        for (Map.Entry<Integer, Stock> pair : stockArray.entrySet()) {
+        for (Map.Entry<Integer, Stock> pair : stockList.entrySet()) {
             Stock stock = pair.getValue();
             System.out.println("Stock #" + pair.getKey() + " Std = " + decimalFormatter.format(stock.getStd()));
         }
          
         System.out.println();
         System.out.println("Covariance Matrix:");
-        for (Stock stock1 : stockArray.values()) {
-            for (Stock stock2 : stockArray.values()) {
+        for (Stock stock1 : stockList.values()) {
+            for (Stock stock2 : stockList.values()) {
                 System.out.print(decimalFormatter.format(Stock.getCovariance(stock1, stock2)) + "\t");
             }
             System.out.println();
         }
         System.out.println();
         System.out.println("Coefficient Matrix:");
-        for (Stock stock1 : stockArray.values()) {
-            for (Stock stock2 : stockArray.values()) {
+        for (Stock stock1 : stockList.values()) {
+            for (Stock stock2 : stockList.values()) {
                 System.out.print(decimalFormatter.format(Stock.getCoefficient(stock1, stock2)) + "\t");
             }
             System.out.println();
