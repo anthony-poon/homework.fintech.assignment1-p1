@@ -58,7 +58,19 @@ public class Main {
         "BOC Hong Kong",
         "Haitong Securities"
     };
-    private static Map<Integer, Stock> stockList = new TreeMap<>();
+    private static final Double[] PRESET_EXPECTED_RETURN = {
+        0.089,
+        0.163,
+        0.251,
+        0.181,
+        0.185,
+        0.241,
+        0.154,
+        0.217,
+        0.126,
+        0.232,
+    };
+    private static Map<Integer, Stock> stockMap = new TreeMap<>();
 
     public static void main(String args[]) throws Exception {
         
@@ -68,7 +80,7 @@ public class Main {
         FileOutputStream outFile = new FileOutputStream("output_" + minYearStr +"_" + maxYearStr + ".txt");
         TeeOutputStream teeStream = new TeeOutputStream(System.out, outFile);
         PrintStream ps = new PrintStream(teeStream);
-        System.setOut(ps);        
+        //System.setOut(ps);        
         DecimalFormat decimalFormatter = new DecimalFormat("0.000");
         
         BufferedReader reader = new BufferedReader(new FileReader(inputPath));
@@ -79,37 +91,51 @@ public class Main {
             Date date = dateFormatter.parse(strArray[0]);
             if (date.after(minYear) && date.before(maxYear)) {
                 for (int col = 1; col <= PRESET_STOCK_CODE.length; col++ ) {
-                    if (!stockList.containsKey(PRESET_STOCK_CODE[col - 1])) {
-                        stockList.put(PRESET_STOCK_CODE[col - 1], new Stock(PRESET_STOCK_CODE[col - 1], PRESET_STOCK_NAME[col - 1]));
+                    if (!stockMap.containsKey(PRESET_STOCK_CODE[col - 1])) {
+                        stockMap.put(PRESET_STOCK_CODE[col - 1], new Stock(PRESET_STOCK_CODE[col - 1], PRESET_STOCK_NAME[col - 1], PRESET_EXPECTED_RETURN[col - 1]));
                     }
-                    Stock currentStock = stockList.get(PRESET_STOCK_CODE[col - 1]);
+                    Stock currentStock = stockMap.get(PRESET_STOCK_CODE[col - 1]);
                     currentStock.addEntry(date, Double.valueOf(strArray[col]));
                 }
             }
         }
         
         System.out.println("Output from " + minYearStr + " to " + maxYearStr);
-        for (Map.Entry<Integer, Stock> pair : stockList.entrySet()) {
+        for (Map.Entry<Integer, Stock> pair : stockMap.entrySet()) {
             Stock stock = pair.getValue();
             System.out.println("Stock #" + pair.getKey() + " Std = " + decimalFormatter.format(stock.getStd()));
         }
-         
+        
+        System.out.println("Output from " + minYearStr + " to " + maxYearStr);
+        for (Map.Entry<Integer, Stock> pair : stockMap.entrySet()) {
+            Stock stock = pair.getValue();
+            System.out.println("Stock #" + pair.getKey() + " E(r) = " + decimalFormatter.format(stock.getExpectedReturn()));
+        }
+        
         System.out.println();
         System.out.println("Covariance Matrix:");
-        for (Stock stock1 : stockList.values()) {
-            for (Stock stock2 : stockList.values()) {
+        for (Stock stock1 : stockMap.values()) {
+            for (Stock stock2 : stockMap.values()) {
                 System.out.print(decimalFormatter.format(Stock.getCovariance(stock1, stock2)) + "\t");
             }
             System.out.println();
         }
         System.out.println();
         System.out.println("Coefficient Matrix:");
-        for (Stock stock1 : stockList.values()) {
-            for (Stock stock2 : stockList.values()) {
+        for (Stock stock1 : stockMap.values()) {
+            for (Stock stock2 : stockMap.values()) {
                 System.out.print(decimalFormatter.format(Stock.getCoefficient(stock1, stock2)) + "\t");
             }
             System.out.println();
         }
+        
+        EfficientFrontier frontier = new EfficientFrontier(new ArrayList(stockMap.values()), 0.1);
+        List<Double> optimalWeight = frontier.gradientDescentOptimiztion();
+        Portfolio portfolio = new Portfolio(new ArrayList(stockMap.values()), optimalWeight);
+        for (Double weight : frontier.gradientDescentOptimiztion()) {
+            System.out.println("Weight = " + weight);
+        }
+        System.out.println("Portfolio return = " + portfolio.getWeightedReturn());
     }
     
     private static void parseArgument(String args[]) throws Exception {

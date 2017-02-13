@@ -18,13 +18,15 @@ public class Stock {
     private int stockCode;
     private List<StockPriceEntry> entryArray = new ArrayList();
     private String name;
-    public Stock(int stockCode, String name) {
+    private Double expectedReturn;
+    public Stock(int stockCode, String name, Double expectedReturn) {
         this.stockCode = stockCode;
         this.name = name;
+        this.expectedReturn = expectedReturn;
     }
     
     public void addEntry(Date date, Double price) {
-        if (entryArray.size() != 0) {
+        if (!entryArray.isEmpty()) {
             // Get last entry
             StockPriceEntry lastEntry = entryArray.get(entryArray.size() - 1);
             Double uValue = Math.log(price / lastEntry.getPrice());
@@ -35,6 +37,9 @@ public class Stock {
         
     }
     
+    public Integer getCode () {
+        return stockCode;
+    }
     public Double getUAverage() {
         int count = 0;
         double sum = 0.0;
@@ -58,6 +63,10 @@ public class Stock {
             }
         }
         return Math.sqrt(sum / (count - 1)) * Math.sqrt(252);
+    }
+    
+    public Double getExpectedReturn() {
+        return expectedReturn;
     }
     
     public List<StockPriceEntry> getAllEntry() {
