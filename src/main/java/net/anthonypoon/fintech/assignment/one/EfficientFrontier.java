@@ -5,15 +5,9 @@
  */
 package net.anthonypoon.fintech.assignment.one;
 
-import java.text.DecimalFormat;
+import Jama.Matrix;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.TreeMap;
 
 /**
  *
@@ -21,68 +15,87 @@ import java.util.TreeMap;
  */
 public class EfficientFrontier {
     //private Portfolio portfolio;
-    private Double porfolioReturn;
+    private Matrix a;
+    private Matrix b;
     private List<Stock> stockList = new ArrayList();
-    private List<Double> bestFitWeight = new ArrayList();
-    private Double lamda1;
-    private Double lamda2;
-    private final Double stepSize = 0.02;
-    public EfficientFrontier(List<Stock> stockList, Double porfolioReturn) {
-        for (Stock stock : stockList) {
-            bestFitWeight.add(1.0 / stockList.size());
-            //Random r = new Random();
-            //bestFitWeight.add(r.nextDouble());
-        }
-        this.porfolioReturn = porfolioReturn;
+    public EfficientFrontier(List<Stock> stockList) {
         this.stockList = stockList;
-        lamda1 = 1.0;
-        lamda2 = 1.0;
+        
     }
     
-    public List<Double> gradientDescentOptimiztion() {
-        int iterCount = 0;
-        Portfolio portfolio = new Portfolio(stockList, bestFitWeight);
-        System.out.println("Starting return = " + portfolio.getWeightedReturn());
-        while (iterCount < 100) {
-            for (int i = 0; i < stockList.size(); i ++) {
-                Double newWeight = bestFitWeight.get(i) - getGradient(i);
-                bestFitWeight.set(i, newWeight);
+    public double[] solveWeight(Double expReturn) {
+        // Matrix n+2 x n+2; n = number of stock;
+        // w1, w2, w3 .... wn, lamda1, lamda2
+        // Create a matrix size num of stock + 2
+        double[][] array = new double[stockList.size() + 2][stockList.size() + 2];
+        for (int row = 0; row < array.length; row ++) {
+            for (int col = 0; col < array[row].length; col ++) {
+                Double coefficient = 0.0;
+                // w.row * stockStd^2 - lamda1 * r1 - lamda2 = ...
+                // if < n && row !== col, coeff = covar(row,col) * w.col
+                // if < n && row == col, coeff = std^2 
+                // else if = n, coeff = - ri
+                // else if = n + 1, coeff = - 1
+                // else, coeff = 0
+                if (row <= stockList.size() - 1) {                  
+                    if (col < stockList.size() && row == col) {
+                        coefficient = Math.pow(stockList.get(col).getStd(), 2);
+                    }
+                    if (col < stockList.size() && row != col) {
+                        coefficient = Stock.getCovariance(stockList.get(row), stockList.get(col));
+                    }
+                    if (col == stockList.size()) {
+                        // Lamda 1
+                        coefficient = - stockList.get(row).getExpectedReturn();
+                    }
+                    if (col == stockList.size() + 1) {
+                        // Lamda 2
+                        coefficient = - 1.0;
+                    }
+                }
+                // sigma[i:1..n](wi * ri) = expectedReturn;
+                // if < n, coeff = ri 
+                // else, coeff = 0
+                if (row == stockList.size()) {                    
+                    if (col < stockList.size()) {
+                        coefficient = stockList.get(col).getExpectedReturn();
+                    }
+                }
+                
+                // sigma[i:1..n](wi) = 1;
+                // if < n, coeff = 1 
+                // else, coeff = 0
+                if (row == stockList.size() + 1) {                    
+                    if (col < stockList.size()) {
+                        coefficient = 1.0;
+                    }
+                }
+                array[row][col] = coefficient;
             }
-            portfolio.setWeight(bestFitWeight);
-            lamda1 = lamda1 - getLamda1Gradient();
-            lamda2 = lamda2 - getLamda2Gradient();
-            DecimalFormat df = new DecimalFormat("#.0000");
-            System.out.println(iterCount + ":\tR = " + df.format(portfolio.getWeightedReturn()) + "\tstd = " + df.format(portfolio.getVariance()) + "\tlam1 = " + df.format(lamda1) + "\tlam2 = " + df.format(lamda2));
-            
-            //System.out.println();
-            iterCount++;
         }
-        return bestFitWeight;
-    }
-    
-    private Double getGradient(Integer index) {
-        Double weight = bestFitWeight.get(index);
-        Double expReturn = stockList.get(index).getExpectedReturn();
-        Double gradient = weight * Math.pow(stockList.get(index).getStd(), 2);
-        gradient = gradient - 2 * lamda1 * (weight * expReturn - porfolioReturn) - 2 * lamda2 * (weight - 1);
-        return gradient * stepSize;
-    }
-    
-    private Double getLamda1Gradient() {
-        Double sum = 0.0;
-        Double weightTotal = 0.0;
-        for (int i = 0; i < stockList.size(); i ++) {
-            weightTotal = weightTotal + bestFitWeight.get(i);
-            sum = sum + bestFitWeight.get(i) * stockList.get(i).getExpectedReturn();
+        
+        a = new Matrix(array);
+        
+        array = new double[stockList.size() + 2][1];
+        for (int row = 0; row < array.length; row ++) {
+            Double coefficient = 0.0;
+            // i = row
+            // if < n, coeff = 0.0
+            // else if = n, coeff = expPReturn;
+            // else if = n + 1, coeff = expPReturn;
+            if (row == stockList.size()) {
+                coefficient = expReturn;
+            }
+            if (row == stockList.size() + 1) {
+                coefficient = 1.0;
+            }
+            array[row][0] = coefficient;
         }
-        return Math.pow((sum / weightTotal  - porfolioReturn), 2) * stepSize;
-    }
-    
-    private Double getLamda2Gradient() {
-        Double sum = 0.0;
-        for (int i = 0; i < bestFitWeight.size(); i ++) {
-            sum = sum + bestFitWeight.get(i);
-        }
-        return Math.pow((sum - 1), 2) * stepSize;
+        
+        b = new Matrix(array);
+        Matrix x = a.solve(b);
+        //x.print(new DecimalFormat("#.000"), 5);
+        //System.out.println();
+        return x.getColumnPackedCopy();
     }
 }

@@ -1,0 +1,68 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package net.anthonypoon.fintech.assignment.one;
+
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.RenderingHints;
+import javax.swing.JFrame;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.plot.FastScatterPlot;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.data.UnknownKeyException;
+import org.jfree.data.xy.XYDataset;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
+import org.jfree.ui.ApplicationFrame;
+
+/**
+ *
+ * @author ypoon
+ */
+public class Plotter extends ApplicationFrame {
+    private XYSeriesCollection dataObj = new XYSeriesCollection();
+    //private XYSeries dataSeries = new XYSeries("Frontier", false);
+    public Plotter(String title) {
+        super(title);       
+    }
+    
+    public void addXYPoint(String seriesName, Double x, Double y) {
+        XYSeries dataSeries = null;
+        try {
+            dataSeries = dataObj.getSeries(seriesName);
+        } catch (UnknownKeyException ex) {
+            dataSeries = new XYSeries(seriesName, false);
+            dataObj.addSeries(dataSeries);
+        }
+        dataSeries.add(x, y);
+    }
+    
+    public void render() {
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                "Efficient Frontier Plot",
+                "Std",
+                "Return",
+                dataObj,
+                PlotOrientation.VERTICAL ,
+                true,
+                true,
+                false
+            );
+        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setPreferredSize(new java.awt.Dimension(560 , 367));
+        XYPlot plot = chart.getXYPlot();
+        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer( );
+        renderer.setSeriesPaint(0, Color.RED);
+        renderer.setSeriesStroke(0, new BasicStroke( 4.0f ) );
+        plot.setRenderer(renderer);        
+        setContentPane(chartPanel);
+    }
+}
