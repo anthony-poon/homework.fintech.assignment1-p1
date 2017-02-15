@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 /**
  *
@@ -105,4 +106,17 @@ public class Stock {
         Double covar = getCovariance(stock1, stock2);
         return covar / (stock1.getStd() * stock2.getStd());
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Stock) {
+            Stock stock = (Stock) obj;
+            return this.getCode().equals(stock.getCode());
+        } else {
+            return false;
+        }
+        
+    }
+    
+    
 }

@@ -48,8 +48,10 @@ public class Portfolio {
         
         for (int x = 0; x < stockList.size(); x++) {
             for (int y = 0; y < stockList.size(); y++) {
-                Double covar = Stock.getCovariance(stockList.get(x), stockList.get(y));
-                covarSum = covarSum + weightList.get(x) * weightList.get(y) * covar;
+                if (x != y) {
+                    Double covar = Stock.getCovariance(stockList.get(x), stockList.get(y));
+                    covarSum = covarSum + weightList.get(x) * weightList.get(y) * covar;
+                }
             }
         }
         return stdSum + covarSum;
