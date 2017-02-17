@@ -8,6 +8,8 @@ package net.anthonypoon.fintech.assignment.one;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.RenderingHints;
+import java.awt.geom.Point2D;
+import java.util.List;
 import javax.swing.JFrame;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
@@ -29,9 +31,10 @@ import org.jfree.ui.ApplicationFrame;
  */
 public class Plotter extends ApplicationFrame {
     private XYSeriesCollection dataObj = new XYSeriesCollection();
-    //private XYSeries dataSeries = new XYSeries("Frontier", false);
+    private String title;
     public Plotter(String title) {
         super(title);       
+        this.title = title;
     }
     
     public void addXYPoint(String seriesName, Double x, Double y) {
@@ -47,8 +50,8 @@ public class Plotter extends ApplicationFrame {
     
     public void render() {
         JFreeChart chart = ChartFactory.createXYLineChart(
-                "Efficient Frontier Plot",
-                "Std",
+                this.title,
+                "Var",
                 "Return",
                 dataObj,
                 PlotOrientation.VERTICAL ,
@@ -64,5 +67,13 @@ public class Plotter extends ApplicationFrame {
         renderer.setSeriesStroke(0, new BasicStroke( 4.0f ) );
         plot.setRenderer(renderer);        
         setContentPane(chartPanel);
+    }
+
+    void addSeries(String seriesName, List<Point2D.Double> ptList) {
+        XYSeries dataSeries = new XYSeries(seriesName, false);
+        for (Point2D.Double pt : ptList) {
+            dataSeries.add(pt.getX(), pt.getY());
+        }
+        dataObj.addSeries(dataSeries);
     }
 }

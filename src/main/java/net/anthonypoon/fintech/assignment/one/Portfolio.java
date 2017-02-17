@@ -6,14 +6,14 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 
 public class Portfolio {
     private List<Stock> stockList = new ArrayList();
     private List<Double> weightList = new ArrayList();
-    public Portfolio(List<Stock> stockList) {
-        int i = 0;
-        this.stockList = stockList;
+    public Portfolio(Collection<Stock> stockList) {
+        this.stockList = new ArrayList(stockList);
     }
     
     public Stock getStock(Integer stockCode) {
@@ -64,10 +64,18 @@ public class Portfolio {
         return stockList.size();
     }
     
-    public void setWeight(List<Double> weightList) {
-        this.weightList = weightList;
+    public void setWeight(Collection<Double> weightList) {
+        this.weightList = new ArrayList(weightList);
     }
     
+    public Map<Integer, Double> getWeight() {
+        Map<Integer, Double> returnMap = new TreeMap();
+        for (int i = 0; i < stockList.size(); i ++) {
+            returnMap.put(stockList.get(i).getCode(), weightList.get(i));
+        }
+        return returnMap;
+    }
+
     public void setWeight(double[] weightArray) {
         this.weightList = new ArrayList();
         for (int i = 0; i < weightArray.length; i ++) {
