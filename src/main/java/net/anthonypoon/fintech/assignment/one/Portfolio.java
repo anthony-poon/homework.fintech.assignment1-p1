@@ -26,7 +26,10 @@ public class Portfolio {
     }
     
     
-    public Double getWeightedReturn() {
+    public Double getWeightedReturn() throws Exception {
+        if (weightList.size() != stockList.size()) {
+            throw new Exception("Weight is not set or invalid weight");
+        }
         Double sum = 0.0;
         // Weight might not add up to one when not normalized
         Double weightSum = 0.0;

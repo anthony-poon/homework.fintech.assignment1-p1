@@ -33,6 +33,7 @@ import org.paukov.combinatorics3.Generator;
  * @author ypoon
  */
 public class Main {
+    private static final double maxBound = 0.25;
     private static DecimalFormat ddf = new DecimalFormat("0.00000");
     private static double etfLowbound = 0.1;
     private static double etfUpbound = 0.3;
@@ -78,65 +79,77 @@ public class Main {
     public static void main(String args[]) throws Exception {
         
         parseArgument(args);
-        Map<String, List<Point2D.Double>> allSeries= new HashMap();
+        
+        Map<String, Map<String, List<Point2D.Double>>> graphMap = new TreeMap();
         for (String path : inputPaths) {
+            Map<String, List<Point2D.Double>> allSeries = new TreeMap();
+            graphMap.put(path, allSeries);
             Map<Integer, Stock> stockMap = processFile(path);
             System.out.println("Output for: " + path);
-            printStockMap(stockMap);            
-            /**
-            EfficientFrontier eftPOSBounded = new EfficientFrontier(stockMap.values());
-            eftPOSBounded.setPostiveOnly(true);
-            eftPOSBounded.setMaxBound(0.3);
-            eftPOSBounded.debugMode(true);
-            Map<Point2D.Double, Map<Integer, Double>> testResult = eftPOSBounded.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);
-            **/
+            printStockMap(stockMap);
+            DecimalFormat df = new DecimalFormat("#.000");
+            
             EfficientFrontier eft = new EfficientFrontier(stockMap.values());
             Map<Point2D.Double, Map<Integer, Double>> result = eft.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);
             List<Point2D.Double> xyPts = new ArrayList(result.keySet());
-            allSeries.put(path + " - Unconstrained", xyPts);
+            allSeries.put(path + " -  Unconstrained", xyPts);
             System.out.println("Unconstrained EFT");
-            List<Map<Integer, Double>> weightList = new ArrayList(result.values());
-            DecimalFormat df = new DecimalFormat("#.000");
-            for (Integer i = 0; i < weightList.size(); i ++) {
-                System.out.printf("Pt#%-3s", i.toString());
-                for (Double weight : weightList.get(i).values()) {
+            for (Map.Entry<Point2D.Double, Map<Integer, Double>> pair : result.entrySet()) {
+                
+                System.out.print("Pt# (" + df.format(pair.getKey().getX()) + ", " + df.format(pair.getKey().getY()) + ") ");
+                List<Double> weightList = new ArrayList(pair.getValue().values());
+                for (Double weight : weightList) {
                     System.out.printf("%-5s ", df.format(weight));
                 }
                 System.out.println();
-            }            
+            }
+
             System.out.println();
-            
-            
-            
             
             EfficientFrontier eftPOS = new EfficientFrontier(stockMap.values());
             eftPOS.setPostiveOnly(true);
             result = eftPOS.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);
             xyPts = new ArrayList(result.keySet());
-            allSeries.put(path + " - POS Only", xyPts);
-            System.out.println("Postive only EFT");
-            weightList = new ArrayList(result.values());
-            for (Integer i = 0; i < weightList.size(); i ++) {
-                System.out.printf("Pt#%-3s", i.toString());
-                for (Double weight : weightList.get(i).values()) {
+            allSeries.put(path + " -  POS Only", xyPts);
+            System.out.println("POS Only EFT");
+            for (Map.Entry<Point2D.Double, Map<Integer, Double>> pair : result.entrySet()) {
+                
+                System.out.print("Pt# (" + df.format(pair.getKey().getX()) + ", " + df.format(pair.getKey().getY()) + ") ");
+                List<Double> weightList = new ArrayList(pair.getValue().values());
+                for (Double weight : weightList) {
                     System.out.printf("%-5s ", df.format(weight));
                 }
                 System.out.println();
             }
-            System.out.println();
             
-            
+            EfficientFrontier eftBounded = new EfficientFrontier(stockMap.values());
+            eftBounded.setMaxBound(maxBound);
+            eftBounded.setPostiveOnly(true);
+            result = eftBounded.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);
+            xyPts = new ArrayList(result.keySet());
+            allSeries.put(path + " -  Bounded " + maxBound, xyPts);
+            System.out.println("Bounded " + maxBound + "EFT");
+            for (Map.Entry<Point2D.Double, Map<Integer, Double>> pair : result.entrySet()) {
+                System.out.print("Pt# (" + df.format(pair.getKey().getX()) + ", " + df.format(pair.getKey().getY()) + ") ");
+                List<Double> weightList = new ArrayList(pair.getValue().values());
+                for (Double weight : weightList) {
+                    System.out.printf("%-5s ", df.format(weight));
+                }
+                System.out.println();
+            }
         }
 
         if (showGraph) {
-            Plotter plotter = new Plotter("ETF");
-            for (Map.Entry<String, List<Point2D.Double>> series : allSeries.entrySet()) {
-                plotter.addSeries(series.getKey(), series.getValue());
-            }            
-            plotter.render();
-            plotter.pack();
-            RefineryUtilities.centerFrameOnScreen(plotter);
-            plotter.setVisible(true);
+            for (Map.Entry<String, Map<String, List<Point2D.Double>>> graph : graphMap.entrySet()) {
+                Plotter plotter = new Plotter(graph.getKey());
+                for (Map.Entry<String, List<Point2D.Double>> series : graph.getValue().entrySet()) {
+                    plotter.addSeries(series.getKey(), series.getValue());
+                }            
+                plotter.render();
+                plotter.pack();
+                RefineryUtilities.centerFrameOnScreen(plotter);
+                plotter.setVisible(true);
+            }
         }
         
         
