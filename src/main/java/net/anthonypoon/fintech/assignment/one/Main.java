@@ -5,40 +5,35 @@
  */
 package net.anthonypoon.fintech.assignment.one;
 
-import java.awt.geom.Point2D;
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.io.output.TeeOutputStream;
 import org.jfree.ui.RefineryUtilities;
-import org.paukov.combinatorics3.Generator;
 /**
  *
  * @author ypoon
  */
 public class Main {
+    private static final double riskFreeR = 0.09;
     private static final double maxBound = 0.25;
     private static DecimalFormat ddf = new DecimalFormat("0.00000");
     private static double etfLowbound = 0.1;
     private static double etfUpbound = 0.3;
     private static double etfInterval = 0.01;
-    private static boolean showGraph = false;
+    private static boolean skipBounded = false;
     private static List<String> inputPaths = new ArrayList();
     private static final int[] PRESET_STOCK_CODE = {
         6,
@@ -76,104 +71,146 @@ public class Main {
         0.126,
         0.232,
     };
+    private static final Double[] PRESET_ALT_EXPECTED_RETURN = {
+        0.089,
+        0.163,
+        0.190,
+        0.181,
+        0.185,
+        0.241,
+        0.154,
+        0.217,
+        0.126,
+        0.232,
+    };
     public static void main(String args[]) throws Exception {
         
-        parseArgument(args);
-        
-        Map<String, Map<String, List<Point2D.Double>>> graphMap = new TreeMap();
+        parseArgument(args);        
         for (String path : inputPaths) {
-            Map<String, List<Point2D.Double>> allSeries = new TreeMap();
-            graphMap.put(path, allSeries);
+            TeeOutputStream teeStream = new TeeOutputStream(System.out, new FileOutputStream("output_" + path + ".txt"));
+            PrintStream ps = new PrintStream(teeStream, true);
+            System.setOut(ps);   
+            List<FrontierCurve> allSeries = new ArrayList();
             Map<Integer, Stock> stockMap = processFile(path);
+            
             System.out.println("Output for: " + path);
             printStockMap(stockMap);
-            DecimalFormat df = new DecimalFormat("#.000");
-            
-            EfficientFrontier eft = new EfficientFrontier(stockMap.values());
-            Map<Point2D.Double, Map<Integer, Double>> result = eft.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);
-            List<Point2D.Double> xyPts = new ArrayList(result.keySet());
-            allSeries.put(path + " -  Unconstrained", xyPts);
-            System.out.println("Unconstrained EFT");
-            for (Map.Entry<Point2D.Double, Map<Integer, Double>> pair : result.entrySet()) {
-                
-                System.out.print("Pt# (" + df.format(pair.getKey().getX()) + ", " + df.format(pair.getKey().getY()) + ") ");
-                List<Double> weightList = new ArrayList(pair.getValue().values());
-                for (Double weight : weightList) {
-                    System.out.printf("%-5s ", df.format(weight));
-                }
-                System.out.println();
-            }
 
+            EfficientFrontier eft = new EfficientFrontier(stockMap.values());
+            FrontierCurve eftCurve = eft.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);
+            eftCurve.setName("Unconstrained");
+            allSeries.add(eftCurve);
+            System.out.println("Unconstrained EFT");
+            for (int i = 0; i < eftCurve.size(); i++) {
+                eftCurve.printWeight(i);
+            }
             System.out.println();
-            
+
+            // Positive only frontier
             EfficientFrontier eftPOS = new EfficientFrontier(stockMap.values());
             eftPOS.setPostiveOnly(true);
-            result = eftPOS.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);
-            xyPts = new ArrayList(result.keySet());
-            allSeries.put(path + " -  POS Only", xyPts);
+            FrontierCurve eftPOSCurve =  eftPOS.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);            
+            allSeries.add(eftPOSCurve);
+            eftPOSCurve.setName("POS Only");
             System.out.println("POS Only EFT");
-            for (Map.Entry<Point2D.Double, Map<Integer, Double>> pair : result.entrySet()) {
-                
-                System.out.print("Pt# (" + df.format(pair.getKey().getX()) + ", " + df.format(pair.getKey().getY()) + ") ");
-                List<Double> weightList = new ArrayList(pair.getValue().values());
-                for (Double weight : weightList) {
-                    System.out.printf("%-5s ", df.format(weight));
-                }
-                System.out.println();
+            for (int i = 0; i < eftPOSCurve.size(); i++) {
+                eftPOSCurve.printWeight(i);
             }
-            
-            EfficientFrontier eftBounded = new EfficientFrontier(stockMap.values());
-            eftBounded.setMaxBound(maxBound);
-            eftBounded.setPostiveOnly(true);
-            result = eftBounded.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);
-            xyPts = new ArrayList(result.keySet());
-            allSeries.put(path + " -  Bounded " + maxBound, xyPts);
-            System.out.println("Bounded " + maxBound + "EFT");
-            for (Map.Entry<Point2D.Double, Map<Integer, Double>> pair : result.entrySet()) {
-                System.out.print("Pt# (" + df.format(pair.getKey().getX()) + ", " + df.format(pair.getKey().getY()) + ") ");
-                List<Double> weightList = new ArrayList(pair.getValue().values());
-                for (Double weight : weightList) {
-                    System.out.printf("%-5s ", df.format(weight));
-                }
-                System.out.println();
-            }
-        }
 
-        if (showGraph) {
-            for (Map.Entry<String, Map<String, List<Point2D.Double>>> graph : graphMap.entrySet()) {
-                Plotter plotter = new Plotter(graph.getKey());
-                for (Map.Entry<String, List<Point2D.Double>> series : graph.getValue().entrySet()) {
-                    plotter.addSeries(series.getKey(), series.getValue());
-                }            
-                plotter.render();
-                plotter.pack();
-                RefineryUtilities.centerFrameOnScreen(plotter);
-                plotter.setVisible(true);
+            // Positive only + max value bounded frontier
+            if (!skipBounded) {
+                EfficientFrontier eftBounded = new EfficientFrontier(stockMap.values());
+                eftBounded.setMaxBound(maxBound);
+                eftBounded.setPostiveOnly(true);
+                FrontierCurve eftBoundedCurve =  eftBounded.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);            
+                eftBoundedCurve.setName("POS + Bounded");
+                allSeries.add(eftBoundedCurve);
+                for (int i = 0; i < eftBoundedCurve.size(); i++) {
+                    eftBoundedCurve.printWeight(i);
+                }
             }
-        }
-        
+
+            Plotter plotter = new Plotter(path);
+            for (FrontierCurve series : allSeries) {
+                plotter.addCurve(series);
+            }
+            plotter.render();
+            plotter.pack();
+            RefineryUtilities.centerFrameOnScreen(plotter);
+            plotter.setVisible(true);
+            
+            getCal(stockMap, path + " CAL Graph");
+            System.out.println();
+        }        
         
     }
     
+    private static void getCal(Map<Integer, Stock> stockMap, String graphName) throws Exception {
+        Double bestSlope1 = Double.MIN_VALUE;
+        int bestIndex1 = 0;
+        EfficientFrontier eftPOS1 = new EfficientFrontier(stockMap.values());
+        eftPOS1.setPostiveOnly(true);
+        FrontierCurve eftPOSCurve1 =  eftPOS1.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);            
+        eftPOSCurve1.setName("Rate 1");
+        for (int i = 0; i < eftPOSCurve1.size(); i ++) {
+            Double slope = (eftPOSCurve1.getPt(i).getY() - riskFreeR) / eftPOSCurve1.getPt(i).getX();
+            if (slope > bestSlope1) {
+                bestSlope1 = slope;
+                bestIndex1 = i;
+            }
+        }
+        System.out.println();
+        System.out.println("Best Weight for rate 1");
+        eftPOSCurve1.printWeight(bestIndex1);
+        
+        Double bestSlope2 = Double.MIN_VALUE;
+        int bestIndex2 = 0;
+        List<Stock> altStock = new ArrayList(stockMap.values());
+        for (int i = 0; i < altStock.size(); i ++) {
+            altStock.get(i).setRate(PRESET_ALT_EXPECTED_RETURN[i]);
+        }
+        
+        EfficientFrontier eftPOS2 = new EfficientFrontier(altStock);
+        eftPOS2.setPostiveOnly(true);
+        FrontierCurve eftPOSCurve2 =  eftPOS2.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);            
+        eftPOSCurve2.setName("Rate 2");
+        for (int i = 0; i < eftPOSCurve2.size(); i ++) {
+            Double slope = (eftPOSCurve2.getPt(i).getY() - riskFreeR) / eftPOSCurve2.getPt(i).getX();
+            if (slope > bestSlope2) {
+                bestSlope2 = slope;
+                bestIndex2 = i;
+            }
+        }
+        System.out.println();
+        System.out.println("Best Weight for rate 2");
+        eftPOSCurve2.printWeight(bestIndex2);
+        
+        Plotter plotter = new Plotter(graphName);
+        plotter.addCurve(eftPOSCurve1);
+        plotter.addCurve(eftPOSCurve2);
+        plotter.addXYPoint("CAL for rate 1", 0.0, riskFreeR);
+        plotter.addXYPoint("CAL for rate 1", eftPOSCurve1.getPt(bestIndex1).getX(), eftPOSCurve1.getPt(bestIndex1).getY());
+        plotter.addXYPoint("CAL for rate 2", 0.0, riskFreeR);
+        plotter.addXYPoint("CAL for rate 2", eftPOSCurve2.getPt(bestIndex2).getX(), eftPOSCurve2.getPt(bestIndex2).getY());        
+        plotter.render();
+        plotter.pack();
+        RefineryUtilities.centerFrameOnScreen(plotter);
+        plotter.setVisible(true);
+    }
+
     private static void parseArgument(String args[]) throws Exception {
         Options options = new Options();
-        options.addOption("graph", false, "Display efficient frontier graph");
+        options.addOption("s", "skip-bounded", false, "skip bounded constrain calculation");
         CommandLineParser parser = new DefaultParser();
         CommandLine cli = parser.parse(options, args);
-        showGraph = cli.hasOption("graph");
+        skipBounded = cli.hasOption("s");
         for (String path : cli.getArgList()) {
             inputPaths.add(path);
         }
     }
     
     private static Map<Integer, Stock> processFile(String path) throws Exception {
-        Map<Integer, Stock> stockMap = new TreeMap<>();
-        FileOutputStream outFile = new FileOutputStream("output.txt");
-        TeeOutputStream teeStream = new TeeOutputStream(System.out, outFile);
-        PrintStream ps = new PrintStream(teeStream, true, "UTF-8");
-        //PrintStream ps = new PrintStream(System.out, true, "UTF-16");
-        System.setOut(ps);        
-               
+        Map<Integer, Stock> stockMap = new TreeMap<>(); 
         BufferedReader reader = new BufferedReader(new FileReader(path));
         String line;
         while ((line = reader.readLine()) != null) {
@@ -188,7 +225,6 @@ public class Main {
                 currentStock.addEntry(date, Double.valueOf(strArray[col]));
             }           
         }
-
         return stockMap; 
     }
     

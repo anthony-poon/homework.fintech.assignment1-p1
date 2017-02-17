@@ -48,10 +48,18 @@ public class Plotter extends ApplicationFrame {
         dataSeries.add(x, y);
     }
     
+    public void addCurve(FrontierCurve curve) {
+        XYSeries dataSeries = new XYSeries(curve.getName(), false);
+        for (int i = 0; i < curve.size(); i++) {
+            dataSeries.add(curve.getPt(i).getX(), curve.getPt(i).getY());
+        }
+        dataObj.addSeries(dataSeries);
+    }
+    
     public void render() {
         JFreeChart chart = ChartFactory.createXYLineChart(
                 this.title,
-                "Var",
+                "std",
                 "Return",
                 dataObj,
                 PlotOrientation.VERTICAL ,
@@ -69,7 +77,7 @@ public class Plotter extends ApplicationFrame {
         setContentPane(chartPanel);
     }
 
-    void addSeries(String seriesName, List<Point2D.Double> ptList) {
+    void addList(String seriesName, List<Point2D.Double> ptList) {
         XYSeries dataSeries = new XYSeries(seriesName, false);
         for (Point2D.Double pt : ptList) {
             dataSeries.add(pt.getX(), pt.getY());

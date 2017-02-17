@@ -115,8 +115,10 @@ public class Stock {
         } else {
             return false;
         }
-        
     }
     
+    public void setRate(Double rate) {
+        expectedReturn = rate;
+    }
     
 }
