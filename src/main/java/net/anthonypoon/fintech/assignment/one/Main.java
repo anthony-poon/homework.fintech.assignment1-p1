@@ -27,7 +27,7 @@ import org.jfree.ui.RefineryUtilities;
  * @author ypoon
  */
 public class Main {
-    private static final double riskFreeR = 0.09;
+    private static final double riskFreeR = 0.0009;
     private static final double maxBound = 0.25;
     private static DecimalFormat ddf = new DecimalFormat("0.00000");
     private static double etfLowbound = 0.1;
