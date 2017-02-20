@@ -85,11 +85,12 @@ public class Main {
     };
     public static void main(String args[]) throws Exception {
         
-        parseArgument(args);        
+        parseArgument(args);     
+        TeeOutputStream teeStream = new TeeOutputStream(System.out, new FileOutputStream("output.txt"));
+        PrintStream ps = new PrintStream(teeStream, true);
+        System.setOut(ps); 
         for (String path : inputPaths) {
-            TeeOutputStream teeStream = new TeeOutputStream(System.out, new FileOutputStream("output_" + path + ".txt"));
-            PrintStream ps = new PrintStream(teeStream, true);
-            System.setOut(ps);   
+              
             List<FrontierCurve> allSeries = new ArrayList();
             Map<Integer, Stock> stockMap = processFile(path);
             
@@ -119,12 +120,14 @@ public class Main {
 
             // Positive only + max value bounded frontier
             if (!skipBounded) {
+                System.out.println();
                 EfficientFrontier eftBounded = new EfficientFrontier(stockMap.values());
                 eftBounded.setMaxBound(maxBound);
                 eftBounded.setPostiveOnly(true);
                 FrontierCurve eftBoundedCurve =  eftBounded.getETFByIncrement(etfLowbound, etfUpbound, etfInterval);            
                 eftBoundedCurve.setName("POS + Bounded");
                 allSeries.add(eftBoundedCurve);
+                System.out.println("POS + Bounded");
                 for (int i = 0; i < eftBoundedCurve.size(); i++) {
                     eftBoundedCurve.printWeight(i);
                 }
